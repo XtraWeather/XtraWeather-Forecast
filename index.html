@@ -1,0 +1,110 @@
+<div style="font-family: Arial; padding:15px; border-radius:10px; background:#0b1a2a; color:white;">
+  
+  <h2 style="margin-bottom:5px;">🌤 XtraWeather Forecast</h2>
+  <div style="font-size:14px; color:#cfd8e3; margin-bottom:10px;">
+    Type your location in the search bar to see the weather forecast
+  </div>
+  
+  <input id="locationInput" type="text" placeholder="Start typing a city..."
+    style="width:100%; padding:10px; border-radius:6px; border:none;">
+  
+  <div id="suggestions" style="background:#13283f; margin-top:5px; border-radius:6px; max-height:150px; overflow:auto;"></div>
+
+  <div id="weatherResult" style="margin-top:15px;"></div>
+
+  <!-- RADAR -->
+  <div id="radarContainer" style="margin-top:15px; display:none;">
+    <div style="font-size:13px; margin-bottom:5px; color:#cfd8e3;">
+      🌧 Live Radar Map
+    </div>
+    <iframe id="radarFrame"
+      style="width:100%; height:280px; border:none; border-radius:8px;"
+      src="">
+    </iframe>
+  </div>
+
+</div>
+
+<script>
+let timeout;
+
+function getDayName(dateStr) {
+  const days = ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"];
+  return days[new Date(dateStr).getDay()];
+}
+
+document.getElementById("locationInput").addEventListener("input", function () {
+  clearTimeout(timeout);
+  const query = this.value;
+  const box = document.getElementById("suggestions");
+
+  if (query.length < 2) {
+    box.innerHTML = "";
+    return;
+  }
+
+  timeout = setTimeout(async () => {
+    const res = await fetch(
+      `https://api.weatherapi.com/v1/search.json?key=0d8d96452dec40619a2214255261004&q=${encodeURIComponent(query)}`
+    );
+    const data = await res.json();
+
+    box.innerHTML = "";
+
+    data.forEach(place => {
+      const div = document.createElement("div");
+      div.innerHTML = `${place.name}, ${place.region}`;
+      div.style.padding = "8px";
+      div.style.cursor = "pointer";
+
+      div.onclick = () => {
+        document.getElementById("locationInput").value = div.innerText;
+        box.innerHTML = "";
+        getWeather(place.lat, place.lon, div.innerText);
+      };
+
+      box.appendChild(div);
+    });
+  }, 300);
+});
+
+async function getWeather(lat, lon, name) {
+  const resultBox = document.getElementById("weatherResult");
+  const radar = document.getElementById("radarContainer");
+  const radarFrame = document.getElementById("radarFrame");
+
+  resultBox.innerHTML = "Loading weather...";
+
+  const res = await fetch(
+    `https://api.weatherapi.com/v1/forecast.json?key=0d8d96452dec40619a2214255261004&q=${lat},${lon}&days=3`
+  );
+  const data = await res.json();
+
+  let html = `
+    <h3>${name}</h3>
+    🌡 Temperature: ${data.current.temp_f}°F<br>
+    🌤 Condition: ${data.current.condition.text}
+  `;
+
+  html += `<div style="display:flex; gap:10px; margin-top:10px;">`;
+
+  data.forecast.forecastday.forEach(day => {
+    html += `
+      <div style="flex:1; background:#13283f; padding:10px; border-radius:8px; text-align:center;">
+        <b>${getDayName(day.date)}</b><br>
+        ${day.day.condition.text}<br>
+        High: ${day.day.maxtemp_f}°F<br>
+        Low: ${day.day.mintemp_f}°F
+      </div>
+    `;
+  });
+
+  html += `</div>`;
+
+  resultBox.innerHTML = html;
+
+  // Radar
+  radar.style.display = "block";
+  radarFrame.src = `https://embed.windy.com/embed2.html?lat=${lat}&lon=${lon}&zoom=6&level=surface&overlay=radar`;
+}
+</script>.weatherapi.com/v1/foreca
